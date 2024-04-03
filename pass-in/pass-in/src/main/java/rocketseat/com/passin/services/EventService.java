@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import rocketseat.com.passin.domain.attendee.Attendee;
+import rocketseat.com.passin.domain.attendee.exceptions.EventFullException;
 import rocketseat.com.passin.domain.event.Event;
 import rocketseat.com.passin.domain.event.exceptions.EventNotFoundException;
 import rocketseat.com.passin.dto.event.EventIdDTO;
@@ -31,7 +32,6 @@ public class EventService {
     }
 
     public EventIdDTO createEvent(EventRequestDTO eventDTO){
-
         Event newEvent = new Event();
 
         newEvent.setTitle(eventDTO.title());
@@ -44,8 +44,22 @@ public class EventService {
         return new EventIdDTO(newEvent.getId());
     }
 
-    private String createSlug(String text){
+    public void registerAttendeeOnEvent(String eventId){
+        this.attendeeService.verifyAttendeeSubscription("", eventId);
 
+        Event event = this.eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException
+                    ("Event not found with ID: " + eventId));
+        List<Attendee> attendeeList = this.attendeeService.getAllAttendeesFromEvent(eventId);
+
+        if (event.getMaximumAttendees() <= attendeeList.size()){
+            throw new EventFullException("Event is full");
+        }
+
+        Attendee newAttendee = new Attendee();
+
+    }
+
+    private String createSlug(String text){
         String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
         return normalized.replaceAll("[\\p{InCOMBINING_DIACRITICAL_MARKS}]", "")
                          .replaceAll("[^\\w\\s]", "")
